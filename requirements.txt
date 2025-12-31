@@ -1,0 +1,7 @@
+gymnasium
+matplotlib
+torch
+torchrl
+numpy
+pygad
+pillow
