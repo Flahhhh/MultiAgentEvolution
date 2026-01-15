@@ -1,14 +1,11 @@
 import os
 import datetime
-import json
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from pygad.pygad import GA
-from pygad.torchga import torchga
 
 from const import device as device_name
-from net import MANetBase, MAFCNet, MAConvNet
+from net import MAFCNet, MAConvNet
 from evolution import Evolution, ma_battle_fit, ma_battle_fit_random, ma_battle_fit_best
 
 archs = {
