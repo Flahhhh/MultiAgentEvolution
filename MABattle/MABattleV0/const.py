@@ -1,6 +1,6 @@
 import numpy as np
 
-BOARD_SIZE = (4,4)
+BOARD_SIZE = (4, 4)
 BOARD_SHAPE = np.array(BOARD_SIZE)
 
 NUM_LINES = 1

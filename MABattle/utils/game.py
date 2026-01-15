@@ -66,7 +66,7 @@ def test_play_game(model: nn.Module, model_, env: MABattleEnv, device):
         state, reward, finished, truncated, info = env.step(actions)
         finished = finished or truncated
 
-        images.append(env.render())
+        images.append(env.unwrapped.get_image())
 
         if env.unwrapped.to_play() == -agent_turn: rewards += reward
 

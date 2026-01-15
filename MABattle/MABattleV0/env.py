@@ -1,6 +1,7 @@
 from typing import List, Optional, Any
 from PIL import Image
 import torch
+import numpy as np
 
 import gymnasium as gym
 from gymnasium.core import ObsType
@@ -14,11 +15,14 @@ class MABattleEnv(gym.Env):
 
     def __init__(self, render_mode: Optional[str] = None):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.flatten_observations = True
+        self.shape = (NUM_AGENTS, BOARD_SHAPE[0]*BOARD_SHAPE[1]) if self.flatten_observations else (NUM_AGENTS, *BOARD_SIZE)
+
         self.observation_space = gym.spaces.Box(
             low=-1,  # -NUM_PIECE_TYPE,
             high=OBS_HIGH,  # NUM_PIECE_TYPE,
-            shape=BOARD_SHAPE,  # (NUM_ROWS, NUM_COLS),
-            dtype=int
+            shape=self.shape,  # (NUM_ROWS, NUM_COLS),
+            dtype=np.float32
         )
         self.action_space = gym.spaces.Discrete(ACTION_SPACE)
         self.render_mode = render_mode
@@ -26,8 +30,7 @@ class MABattleEnv(gym.Env):
 
         self.reward_type = "sum"
         #self.subtract_lost = True
-        self.flatten_observations = True
-        self.max_c = 25
+        self.max_c = 50
     def reset(self, *, seed: int | None = None,
               options: dict[str, Any] | None = None, ):  # -> tuple[ObsType, dict[str, Any]]:
         super().reset(seed=seed)
@@ -73,35 +76,33 @@ class MABattleEnv(gym.Env):
         return legals
 
     def render(self):
+        return self.get_state()
+
+    def get_image(self):
         if self._board.turn == -1:
             self._board.flip()
 
-        if self.render_mode == "human":
-            image = Image.new("RGB", (BOARD_SIZE[0]*UNIT_IMAGE_SIZE[0], BOARD_SIZE[1]*UNIT_IMAGE_SIZE[1]), "black")
-            blue_image = Image.open(BLUE_UNIT_IMAGE).convert("RGBA")
-            red_image = Image.open(RED_UNIT_IMAGE).convert("RGBA")
-            cell_image = Image.open(CELL_IMAGE).convert("RGBA")
-            mask = red_image.split()[3]
+        image = Image.new("RGB", (BOARD_SIZE[0] * UNIT_IMAGE_SIZE[0], BOARD_SIZE[1] * UNIT_IMAGE_SIZE[1]), "black")
+        blue_image = Image.open(BLUE_UNIT_IMAGE).convert("RGBA")
+        red_image = Image.open(RED_UNIT_IMAGE).convert("RGBA")
+        cell_image = Image.open(CELL_IMAGE).convert("RGBA")
+        mask = red_image.split()[3]
 
-            for i in range(BOARD_SIZE[0]):
-                for j in range(BOARD_SIZE[1]):
-                    image.paste(cell_image, (j*UNIT_IMAGE_SIZE[0], i*UNIT_IMAGE_SIZE[1]))
+        for i in range(BOARD_SIZE[0]):
+            for j in range(BOARD_SIZE[1]):
+                image.paste(cell_image, (j * UNIT_IMAGE_SIZE[0], i * UNIT_IMAGE_SIZE[1]))
 
-                    if (i,j) in self._board.units[1]:
-                        image.paste(blue_image, (j*UNIT_IMAGE_SIZE[0], i*UNIT_IMAGE_SIZE[1]), mask=mask)
-                        #image.putpixel((i,j), (255,0,0))
-                    elif (i,j) in self._board.units[-1]:
-                        #image.putpixel((i,j), (0,0,255))
-                        image.paste(red_image, (j*UNIT_IMAGE_SIZE[0], i*UNIT_IMAGE_SIZE[1]), mask=mask)
+                if (i, j) in self._board.units[1]:
+                    image.paste(blue_image, (j * UNIT_IMAGE_SIZE[0], i * UNIT_IMAGE_SIZE[1]), mask=mask)
+                    # image.putpixel((i,j), (255,0,0))
+                elif (i, j) in self._board.units[-1]:
+                    # image.putpixel((i,j), (0,0,255))
+                    image.paste(red_image, (j * UNIT_IMAGE_SIZE[0], i * UNIT_IMAGE_SIZE[1]), mask=mask)
 
-            if self._board.turn == -1:
-                self._board.flip()
-            return image
-        else:
-            if self._board.turn == -1:
-                self._board.flip()
-            return self.get_state()
+        if self._board.turn == -1:
+            self._board.flip()
 
+        return image
 
     def close(self):
         self._board = None
@@ -111,7 +112,8 @@ class MABattleEnv(gym.Env):
         return self._board.turn
 
     def get_state(self):
-        state = torch.zeros(NUM_AGENTS, *BOARD_SIZE)
+        state = np.zeros(shape=(NUM_AGENTS, *BOARD_SIZE), dtype=np.float32)
+        #state = torch.zeros(NUM_AGENTS, *BOARD_SIZE)
 
         for pos, unit in self._board.units[self._board.turn].items():
             #print(pos, state[pos[0], pos[1]], state, "SSSS")
@@ -132,7 +134,8 @@ class MABattleEnv(gym.Env):
         #            rel_player = obj.player * self.turn
         #            state[i, j] = obj.idx if rel_player==1 else -1
         if self.flatten_observations:
-            state = torch.reshape(state, shape=[4, BOARD_SHAPE[0]*BOARD_SHAPE[1]])
+            state = np.reshape(state, shape=[NUM_AGENTS, BOARD_SHAPE[0]*BOARD_SHAPE[1]])
+            #state = torch.reshape(state, shape=[4, BOARD_SHAPE[0]*BOARD_SHAPE[1]])
 
         return state
 
