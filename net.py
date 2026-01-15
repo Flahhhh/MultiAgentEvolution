@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torchrl.modules.distributions import MaskedCategorical
-from torch.nn.functional import relu, softmax
+from torch.nn.functional import relu
 
 from MABattle.MABattleV0 import NUM_AGENTS, ACTION_SPACE
 from const import device
@@ -25,7 +25,6 @@ class MNISTNet(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        # print(x, x.shape, x.dtype)
         x = self.max_pool(self.relu(self.conv1(x)))
         x = self.max_pool(self.relu(self.conv2(x)))
         x = self.max_pool(self.relu(self.conv3(x)))
@@ -46,7 +45,7 @@ class Logic2Net(nn.Module):
 
     def forward(self, x):
         x = relu(self.fc1(x))
-        x = relu(self.fc2(x))  # softmax(self.fc2(x))
+        x = relu(self.fc2(x))
 
         return x
 
@@ -61,32 +60,19 @@ class MANetBase(nn.Module):
     def get_actions(self, x, legals):
         actions = torch.full([NUM_AGENTS], 0, device=device)
 
-        #print(f"INPUT: {x}")
-        #x = self.forward(x).squeeze(0)
-        #x = x.reshape(NUM_AGENTS, ACTION_SPACE)
         x = self.forward(x)
-        #print(x.shape)
-        #softmax(x, 1) * legals
-        #print(f"MIDDLE: {x} | LEGALS: {legals}")
         mask = legals.any(1)
-
 
         dist = MaskedCategorical(logits=x[mask], mask=legals[mask])
         sample = dist.sample()
 
         actions[mask] = sample
-        #print(x, x.shape, sample, sample.shape, )
-
-
-        #print(legals, x)
 
         return actions
 
 class MAConvNet(MANetBase):
     def __init__(self):
         super(MAConvNet, self).__init__()
-        #self.max_pool = nn.MaxPool2d(2, 2)
-        # self.batch_norm = nn.BatchNorm2d()
         self.conv1 = nn.Conv2d(1, 2, kernel_size=3, stride=1, padding="same", bias=True)
         self.conv2 = nn.Conv2d(2, 4, kernel_size=3, stride=1, padding="same", bias=True)
         self.flatten = nn.Flatten(start_dim=-3, end_dim=-1)
@@ -96,20 +82,14 @@ class MAConvNet(MANetBase):
         self.softmax = nn.Softmax(dim=1)
         self.relu = nn.ReLU()
     def forward(self, x):
-        # x = self.max_pool(relu(self.conv1(x)))
-        # x = self.max_pool(relu(self.conv2(x)))
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
-        # print(x.shape)
         x = self.flatten(x)
-        # print(x.shape)
 
-        x = self.relu(self.fc1(x))  # relu(self.fc(x))
+        x = self.relu(self.fc1(x))
         x = self.fc2(x)
-        # print(x.shape)
 
         return x
-
 
 class MAFCNet(MANetBase):
     def __init__(self):

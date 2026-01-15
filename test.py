@@ -13,6 +13,6 @@ state_dict = torch.load(r"C:\Users\YOU-LA\Desktop\apple\genetic_algorithms\nne\l
 model.load_state_dict(state_dict)
 
 model_ = RandomAgent()
-env = make_env()  # gym.make(env_name, render_mode="human")
+env = make_env()
 
 print(test_play_game(model, model_, env, device))

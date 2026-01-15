@@ -19,9 +19,9 @@ class MABattleEnv(gym.Env):
         self.shape = (NUM_AGENTS, BOARD_SHAPE[0]*BOARD_SHAPE[1]) if self.flatten_observations else (NUM_AGENTS, *BOARD_SIZE)
 
         self.observation_space = gym.spaces.Box(
-            low=-1,  # -NUM_PIECE_TYPE,
-            high=OBS_HIGH,  # NUM_PIECE_TYPE,
-            shape=self.shape,  # (NUM_ROWS, NUM_COLS),
+            low=-1,
+            high=OBS_HIGH,
+            shape=self.shape,
             dtype=np.float32
         )
         self.action_space = gym.spaces.Discrete(ACTION_SPACE)
@@ -29,10 +29,9 @@ class MABattleEnv(gym.Env):
         self._board = Board()
 
         self.reward_type = "sum"
-        #self.subtract_lost = True
         self.max_c = 50
     def reset(self, *, seed: int | None = None,
-              options: dict[str, Any] | None = None, ):  # -> tuple[ObsType, dict[str, Any]]:
+              options: dict[str, Any] | None = None, ):
         super().reset(seed=seed)
         self._board.reset()
         self.c = 0
@@ -43,7 +42,6 @@ class MABattleEnv(gym.Env):
         return state, {"legals": legals}
 
     def step(self, actions) -> tuple:
-        #print(actions)
         rewards, done = self._board.step({idx: actions[idx-1] for idx in self._board.get_alive()})
         if self.reward_type == "mean":
             reward = sum(rewards)/len(rewards)
@@ -55,11 +53,8 @@ class MABattleEnv(gym.Env):
         state = self.get_state()
 
         self.c += 1
-        #print(self.c)
         truncated = self.c >= self.max_c
         info = {"legals": self.get_legals()}
-
-        # finished = done or truncated
 
         return state, reward, done, truncated, info
 
@@ -68,11 +63,9 @@ class MABattleEnv(gym.Env):
         legal_actions = self._board.get_possible_actions()
 
         for idx, move_idxs in legal_actions.items():
-            #print(move_idxs)
             for move_idx in move_idxs:
                 legals[idx-1, move_idx] = True
 
-        #print(legals, legals.argmax(1))
         return legals
 
     def render(self):
@@ -94,9 +87,7 @@ class MABattleEnv(gym.Env):
 
                 if (i, j) in self._board.units[1]:
                     image.paste(blue_image, (j * UNIT_IMAGE_SIZE[0], i * UNIT_IMAGE_SIZE[1]), mask=mask)
-                    # image.putpixel((i,j), (255,0,0))
                 elif (i, j) in self._board.units[-1]:
-                    # image.putpixel((i,j), (0,0,255))
                     image.paste(red_image, (j * UNIT_IMAGE_SIZE[0], i * UNIT_IMAGE_SIZE[1]), mask=mask)
 
         if self._board.turn == -1:
@@ -113,29 +104,17 @@ class MABattleEnv(gym.Env):
 
     def get_state(self):
         state = np.zeros(shape=(NUM_AGENTS, *BOARD_SIZE), dtype=np.float32)
-        #state = torch.zeros(NUM_AGENTS, *BOARD_SIZE)
 
         for pos, unit in self._board.units[self._board.turn].items():
-            #print(pos, state[pos[0], pos[1]], state, "SSSS")
-            # state[*pos] = unit.idx
 
             state[:, pos[0], pos[1]] = 1#unit.idx
             state[unit.idx-1, pos[0], pos[1]] = 2
 
         for pos, unit in self._board.units[-self._board.turn].items():
-            # state[*pos] = -1
             state[:, pos[0], pos[1]] = -1
 
-        #print(state.shape)
-        # for i in range(BOARD_SHAPE[0]):
-        #    for j in range(BOARD_SHAPE[1]):
-        #        obj = self.board[i, j]
-        #        if obj != None:
-        #            rel_player = obj.player * self.turn
-        #            state[i, j] = obj.idx if rel_player==1 else -1
         if self.flatten_observations:
             state = np.reshape(state, shape=[NUM_AGENTS, BOARD_SHAPE[0]*BOARD_SHAPE[1]])
-            #state = torch.reshape(state, shape=[4, BOARD_SHAPE[0]*BOARD_SHAPE[1]])
 
         return state
 

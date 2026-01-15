@@ -1,5 +1,5 @@
 from copy import deepcopy
-from multiprocessing import Pool, Process
+from multiprocessing import Pool
 
 import numpy as np
 from tqdm import tqdm
